@@ -1,0 +1,10 @@
+# Compiled binary
+Reek.exe
+AntiCheatAIO.exe
+
+# WebView2 user data cache
+*.WebView2/
+
+# Windows
+Thumbs.db
+Desktop.ini

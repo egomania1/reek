@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reek v3</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; background: #b8b2aa; }
+
+:root {
+  --glass:        rgba(255,252,249,0.72);
+  --glass-border: rgba(255,255,255,0.95);
+  --glass-sh:     0 8px 32px rgba(80,70,60,0.22), 0 2px 8px rgba(80,70,60,0.10), inset 0 1.5px 0 rgba(255,255,255,0.98);
+  --blur:         blur(36px) saturate(1.8);
+  --text:         #0e0e10;
+  --sub:          #5a6170;
+  --yellow:       #c9a200;
+  --yellow-dark:  #a88600;
+  --yellow-glow:  rgba(201,162,0,0.42);
+  --red:          #d63030;
+  --orange:       #d4890a;
+  --blue:         #1a6fd4;
+  --green:        #1aaa50;
+  --dot-wait:     rgba(0,0,0,0.18);
+  --dot-run:      #f5a623;
+  --dot-clean:    #1aaa50;
+  --dot-alert:    #d63030;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Arial, sans-serif;
+  background:
+    radial-gradient(ellipse at 16% 20%, rgba(255,225,190,0.55) 0%, transparent 42%),
+    radial-gradient(ellipse at 80% 72%, rgba(175,162,148,0.70) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(220,210,196,0.50) 0%, transparent 52%),
+    radial-gradient(ellipse at 68% 16%, rgba(195,185,168,0.60) 0%, transparent 38%),
+    radial-gradient(ellipse at 26% 80%, rgba(160,152,144,0.65) 0%, transparent 40%),
+    #b8b2aa;
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* ── Titlebar pill ────────────────────────────────────────── */
+#titlebar {
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.tb-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px 6px 18px;
+  background: rgba(255,253,250,0.78);
+  backdrop-filter: blur(52px) saturate(1.8);
+  -webkit-backdrop-filter: blur(52px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,0.95);
+  border-radius: 999px;
+  box-shadow: 0 8px 32px rgba(80,70,60,0.22), inset 0 1.5px 0 rgba(255,255,255,0.98);
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.tb-pill::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 55%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 999px 999px 0 0;
+  pointer-events: none;
+}
+.tb-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.04em;
+  color: var(--text);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+.tb-badge {
+  background: rgba(15,15,22,0.84);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 5px;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
+.tb-nav {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.tb-tab {
+  padding: 5px 15px; border-radius: 20px;
+  font-size: 12.5px; font-weight: 500;
+  color: #555; cursor: pointer;
+  border: none; background: transparent;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+.tb-tab:hover {
+  background: rgba(255,255,255,0.55);
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(80,100,160,0.12), inset 0 1.5px 0 rgba(255,255,255,0.90);
+}
+.tb-tab.active {
+  background: rgba(12,12,18,0.86);
+  backdrop-filter: blur(16px) saturate(2);
+  -webkit-backdrop-filter: blur(16px) saturate(2);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.tb-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 5px;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+.tb-sysinfo {
+  font-size: 11px; color: #888;
+  display: flex; align-items: center; gap: 5px;
+  margin-right: 8px;
+}
+.tb-sysinfo::before {
+  content: '●'; color: var(--green); font-size: 8px;
+  filter: drop-shadow(0 0 3px rgba(26,170,80,0.65));
+}
+.tb-wbtn {
+  width: 26px; height: 26px;
+  border: 1px solid rgba(255,255,255,0.50); cursor: pointer;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.06); color: #666; border-radius: 7px;
+  transition: background 0.12s;
+}
+.tb-wbtn:hover { background: rgba(0,0,0,0.13); }
+.tb-wbtn-close {
+  background: rgba(214,48,48,0.90); color: white; border-radius: 50%;
+  width: 20px; height: 20px; font-size: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 2px 8px rgba(214,48,48,0.38);
+}
+.tb-wbtn-close:hover { background: rgba(184,30,30,0.96); }
+
+/* ── Content ──────────────────────────────────────────────── */
+#content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+
+.page { display: none; flex-direction: column; flex: 1; overflow: hidden; padding: clamp(12px, 1.6vh, 18px) clamp(14px, 1.6vw, 20px); gap: clamp(8px, 1vh, 11px); min-height: 0; }
+.page.active { display: flex; }
+
+/* ── Accueil ──────────────────────────────────────────────── */
+.page-title { font-size: clamp(14px, 1.8vh, 20px); font-weight: 800; margin-bottom: 2px; flex-shrink: 0; }
+.page-sub { font-size: 12px; color: var(--sub); margin-bottom: 0; flex-shrink: 0; }
+
+.row { display: flex; gap: clamp(8px, 1vw, 11px); min-height: 0; }
+.row-auto   { flex: 1.1; min-height: 0; }
+.row-fill   { flex: 1.4; min-height: 0; }
+.row-bottom { flex: 0.8; min-height: 0; }
+
+/* ── Cards — frosted glass ────────────────────────────────── */
+.card {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  box-shadow: var(--glass-sh);
+  padding: clamp(12px, 1.6vh, 22px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 22px 22px 0 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.card > * { position: relative; z-index: 1; }
+.card:hover {
+  box-shadow: 0 16px 48px rgba(80,70,60,0.28), 0 4px 12px rgba(80,70,60,0.12), inset 0 1.5px 0 rgba(255,255,255,0.98);
+  transform: translateY(-2px);
+}
+.card:active { transform: translateY(0); transition-duration: 0.08s; }
+
+/* Score card */
+.score-card { flex: 1.3; position: relative; }
+.score-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--sub); margin-bottom: clamp(6px, 1vh, 12px); }
+.score-value { font-size: clamp(36px, 5vh, 68px); font-weight: 800; color: var(--yellow); line-height: 1; margin-bottom: 6px; filter: drop-shadow(0 2px 10px rgba(201,162,0,0.28)); }
+.score-denom { font-size: 13px; color: var(--sub); margin-bottom: auto; padding-bottom: clamp(8px, 1.8vh, 20px); }
+.score-badge {
+  position: absolute; top: 20px; right: 20px;
+  font-size: 10.5px; font-weight: 700;
+  padding: 3px 10px; border-radius: 6px;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(232,255,242,0.75); color: var(--green);
+  border: 1px solid rgba(184,232,204,0.65);
+}
+.score-badge.danger { background: rgba(255,240,240,0.75); color: var(--red);    border-color: rgba(245,192,192,0.65); }
+.score-badge.warn   { background: rgba(255,251,226,0.75); color: var(--orange); border-color: rgba(245,224,155,0.65); }
+.score-bar-wrap { height: 6px; background: rgba(0,0,0,0.10); border-radius: 3px; overflow: hidden; margin-top: auto; }
+.score-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--yellow), #f0d000); box-shadow: 0 0 10px rgba(201,162,0,0.45); transition: width 0.5s ease; }
+
+/* Stat cards */
+.stat-card { flex: 1; justify-content: space-between; }
+.stat-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.stat-dot-red    { background: var(--red); }
+.stat-dot-orange { background: var(--orange); }
+.stat-dot-blue   { background: var(--blue); }
+.stat-tag { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.stat-num { font-size: clamp(30px, 4.2vh, 56px); font-weight: 800; line-height: 1; margin-bottom: 6px; }
+.stat-num-red    { color: var(--red); }
+.stat-num-orange { color: var(--orange); }
+.stat-num-blue   { color: var(--blue); }
+.stat-desc { font-size: 12px; color: var(--sub); margin-top: auto; }
+
+/* Bottom row */
+.chart-card { flex: 1.1; overflow: hidden; min-height: 0; }
+.chart-tabs { display: flex; gap: 0; margin-bottom: 12px; align-items: center; }
+.chart-tab { font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer; padding: 3px 0; margin-right: 14px; border-bottom: 2px solid transparent; }
+.chart-tab.active { color: var(--text); border-bottom-color: var(--yellow); }
+.chart-tab-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.chart-hist-link { margin-left: auto; font-size: 11.5px; color: var(--sub); cursor: pointer; }
+.chart-hist-link:hover { color: var(--text); }
+.chart-area {
+  height: clamp(60px, 9vh, 120px);
+  border: 1px solid rgba(255,255,255,0.80);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(20px) saturate(2);
+  -webkit-backdrop-filter: blur(20px) saturate(2);
+  display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 12px;
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.90);
+}
+
+.last-scan-card { flex: 1; display: flex; flex-direction: column; }
+.last-scan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.last-scan-title { font-size: 13px; font-weight: 700; }
+.btn-new-scan {
+  background: linear-gradient(135deg, #e8cc00 0%, var(--yellow) 100%);
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.38);
+  border-radius: 20px;
+  padding: 6px 16px; font-size: 12px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 16px var(--yellow-glow), inset 0 1px 0 rgba(255,255,255,0.42);
+  transition: transform 0.12s, box-shadow 0.15s;
+}
+.btn-new-scan:hover { transform: translateY(-1px); box-shadow: 0 7px 22px var(--yellow-glow), inset 0 1px 0 rgba(255,255,255,0.42); }
+.btn-new-scan:active { transform: translateY(0); }
+.last-scan-content { flex: 1; font-size: 12px; color: var(--sub); line-height: 1.7; }
+.last-scan-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.55); display: flex; justify-content: space-between; font-size: 11.5px; color: var(--sub); }
+
+/* Sections overview */
+.sections-card { }
+.sections-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sections-title { font-size: 13px; font-weight: 700; }
+.sections-link { font-size: 12px; color: var(--sub); cursor: pointer; }
+.sections-link:hover { color: var(--text); }
+.dots-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--dot-wait);
+  border: 1px solid rgba(255,255,255,0.38);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+  cursor: default;
+}
+.dot.running { background: var(--dot-run); transform: scale(1.15); box-shadow: 0 0 7px rgba(245,166,35,0.65); }
+.dot.clean   { background: var(--dot-clean); box-shadow: 0 0 5px rgba(26,170,80,0.40); }
+.dot.alert   { background: var(--dot-alert); box-shadow: 0 0 7px rgba(214,48,48,0.50); }
+.dot.medium  { background: var(--orange);    box-shadow: 0 0 5px rgba(212,137,10,0.45); }
+.dots-legend { display: flex; gap: 16px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--sub); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Scanner page ─────────────────────────────────────────── */
+.scanner-layout { display: flex; gap: clamp(8px, 1vw, 14px); flex: 1; min-height: 0; overflow: hidden; }
+.scanner-sidebar { width: clamp(180px, 17vw, 240px); flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.scanner-main { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+.btn-scan-big {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, #e8cc00 0%, var(--yellow) 100%);
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.38); border-radius: 12px;
+  font-size: 13.5px; font-weight: 800; letter-spacing: 0.04em;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px var(--yellow-glow), inset 0 1px 0 rgba(255,255,255,0.42);
+  transition: transform 0.12s, box-shadow 0.15s;
+}
+.btn-scan-big:hover { transform: translateY(-1px); box-shadow: 0 8px 28px var(--yellow-glow), inset 0 1px 0 rgba(255,255,255,0.42); }
+.btn-scan-big:active { transform: translateY(0); }
+.btn-scan-big:disabled { background: rgba(0,0,0,0.12); box-shadow: none; cursor: not-allowed; transform: none; color: #888; }
+
+.btn-stop-scan {
+  width: 100%; padding: 9px;
+  background: rgba(255,232,232,0.55); color: var(--red);
+  border: 1px solid rgba(245,192,192,0.75); border-radius: 12px;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer; display: none;
+  backdrop-filter: blur(20px) saturate(2);
+  -webkit-backdrop-filter: blur(20px) saturate(2);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.90);
+  transition: background 0.15s;
+}
+.btn-stop-scan.show { display: block; }
+.btn-stop-scan:hover { background: rgba(255,210,210,0.85); }
+
+.scan-info { font-size: 11.5px; color: var(--sub); line-height: 1.7; }
+.scan-info strong { color: var(--text); }
+
+.prog-wrap { display: none; flex-direction: column; gap: 5px; }
+.prog-wrap.show { display: flex; }
+.prog-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); }
+.prog-bar { height: 4px; background: rgba(0,0,0,0.10); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--yellow), #f0d000); border-radius: 2px; transition: width 0.4s ease; width: 0%; box-shadow: 0 0 7px rgba(201,162,0,0.45); }
+
+.console-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.console-topbar {
+  padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.55);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.console-title-row { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.console-indicator { width: 7px; height: 7px; border-radius: 50%; background: rgba(0,0,0,0.15); }
+.console-indicator.on { background: #e8c800; box-shadow: 0 0 7px rgba(232,200,0,0.80), 0 0 16px rgba(232,200,0,0.38); animation: blink 0.9s infinite; }
+.console-indicator.done { background: var(--green); box-shadow: 0 0 7px rgba(26,170,80,0.55); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+.console-status-txt { font-size: 11px; color: var(--sub); }
+.console-cur-sec {
+  padding: 5px 14px; font-size: 11px; font-weight: 600; color: #555;
+  background: rgba(0,0,0,0.035); border-bottom: 1px solid rgba(255,255,255,0.45);
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+}
+.ccs-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #e8c800; flex-shrink: 0;
+  box-shadow: 0 0 5px rgba(232,200,0,0.7); animation: blink 0.9s infinite;
+}
+
+.console-actions { display: flex; gap: 6px; }
+.btn-console-action {
+  padding: 3px 10px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.80);
+  background: rgba(255,255,255,0.38); font-size: 11px; color: var(--sub); cursor: pointer;
+  backdrop-filter: blur(20px) saturate(2);
+  -webkit-backdrop-filter: blur(20px) saturate(2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.90);
+  transition: background 0.12s;
+}
+.btn-console-action:hover { background: rgba(255,255,255,0.68); color: var(--text); }
+
+#console-out {
+  flex: 1; overflow-y: auto; padding: 12px 14px;
+  font-family: 'Cascadia Code','Fira Code','Consolas',monospace;
+  font-size: 11.5px; line-height: 1.75;
+  color: #444;
+  scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.14) transparent;
+}
+#console-out::-webkit-scrollbar { width: 5px; }
+#console-out::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.14); border-radius: 3px; }
+
+.cl-high   { color: var(--red); font-weight: 600; }
+.cl-medium { color: var(--orange); font-weight: 600; }
+.cl-low    { color: var(--blue); }
+.cl-ok     { color: var(--green); font-weight: 500; }
+.cl-tilde  { color: #777; }
+.cl-section {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 9px; margin: 8px 0 3px 0;
+  background: rgba(0,0,0,0.055);
+  border-left: 3px solid #999;
+  border-radius: 0 4px 4px 0;
+  color: #222; font-weight: 700;
+}
+.cl-sec-num {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  background: #888; color: #fff;
+  padding: 1px 6px; border-radius: 3px; flex-shrink: 0;
+}
+.cl-sec-name { font-size: 11.5px; letter-spacing: 0.2px; }
+.cl-header  { color: #333; font-weight: 700; font-size: 13px; }
+.cl-date    { color: var(--sub); }
+.cl-blank   { }
+
+/* ── Sections page ────────────────────────────────────────── */
+.sections-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 10px; }
+.section-item {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(120,110,95,0.10), inset 0 1.5px 0 rgba(255,255,255,0.96);
+  padding: 11px 14px; display: flex; align-items: center; gap: 10px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.section-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(120,110,95,0.15), inset 0 1.5px 0 rgba(255,255,255,0.98);
+}
+.section-num { font-size: 11px; font-weight: 700; color: var(--sub); min-width: 24px; }
+.section-name { font-size: 12.5px; font-weight: 600; flex: 1; }
+.section-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.sb-wait   { background: rgba(238,238,238,0.72); color: #777; border: 1px solid rgba(200,200,200,0.50); }
+.sb-run    { background: rgba(255,248,218,0.80); color: var(--orange); border: 1px solid rgba(245,224,155,0.60); }
+.sb-clean  { background: rgba(230,255,242,0.80); color: var(--green);  border: 1px solid rgba(180,232,200,0.60); }
+.sb-high   { background: rgba(255,238,238,0.80); color: var(--red);    border: 1px solid rgba(245,190,190,0.60); }
+.sb-medium { background: rgba(255,248,218,0.80); color: var(--orange); border: 1px solid rgba(245,224,155,0.60); }
+.sb-low    { background: rgba(230,240,255,0.80); color: var(--blue);   border: 1px solid rgba(175,207,248,0.60); }
+
+/* ── Rapport page ─────────────────────────────────────────── */
+.rapport-layout { display: flex; gap: 14px; }
+.rapport-cats { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.rapport-cat-card { }
+.rcat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.rcat-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.rb-high   { background: rgba(255,238,238,0.80); color: var(--red);    border: 1px solid rgba(245,190,190,0.65); }
+.rb-medium { background: rgba(255,248,218,0.80); color: var(--orange); border: 1px solid rgba(245,224,155,0.65); }
+.rb-low    { background: rgba(230,240,255,0.80); color: var(--blue);   border: 1px solid rgba(175,207,248,0.65); }
+.rb-ok     { background: rgba(230,255,242,0.80); color: var(--green);  border: 1px solid rgba(180,232,200,0.65); }
+.rcat-count { font-size: 20px; font-weight: 800; margin-left: auto; }
+.rcat-list { font-size: 11.5px; color: var(--sub); line-height: 1.8; max-height: 130px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.12) transparent; }
+.rcat-list::-webkit-scrollbar { width: 4px; }
+.rcat-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+.rcat-item { padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+/* ── Historique ───────────────────────────────────────────── */
+.hist-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-item {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(120,110,95,0.10), inset 0 1.5px 0 rgba(255,255,255,0.96);
+  padding: 13px 16px; display: flex; align-items: center; gap: 14px; cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hist-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(120,110,95,0.15), inset 0 1.5px 0 rgba(255,255,255,0.98);
+}
+.hist-item:active { transform: translateY(0); transition-duration: 0.08s; }
+.hist-date { font-size: 12.5px; font-weight: 600; min-width: 140px; }
+.hist-badges { display: flex; gap: 6px; }
+.hb {
+  font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.hb-h  { background: rgba(255,238,238,0.80); color: var(--red);    border: 1px solid rgba(245,190,190,0.60); }
+.hb-m  { background: rgba(255,248,218,0.80); color: var(--orange); border: 1px solid rgba(245,224,155,0.60); }
+.hb-ok { background: rgba(230,255,242,0.80); color: var(--green);  border: 1px solid rgba(180,232,200,0.60); }
+.hist-right { margin-left: auto; font-size: 11px; color: var(--sub); }
+
+/* ── Utility ──────────────────────────────────────────────── */
+.empty-hint { color: var(--sub); font-size: 12.5px; text-align: center; padding: 40px 0; }
+.divider-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sub); margin: 12px 0 6px; }
+.scroll-inner { max-height: 100%; overflow-y: auto; scrollbar-width: thin; }
+
+/* ── Section detail popup ─────────────────────────────────── */
+#section-popup-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  align-items: center; justify-content: center;
+  background: rgba(25,20,15,0.30);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#section-popup-overlay.open { display: flex; }
+.section-popup {
+  background: rgba(255,253,250,0.78);
+  backdrop-filter: blur(52px) saturate(1.8);
+  -webkit-backdrop-filter: blur(52px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,0.94);
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(70,55,40,0.26), inset 0 1.5px 0 rgba(255,255,255,0.98);
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  animation: sp-in 0.26s cubic-bezier(0.34,1.48,0.64,1) forwards;
+}
+.section-popup::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 42%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 24px 24px 0 0; pointer-events: none; z-index: 0;
+}
+@keyframes sp-in {
+  from { opacity: 0; transform: scale(0.88) translateY(14px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+/* Header */
+.sp-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  flex-shrink: 0; position: relative; z-index: 1;
+}
+.sp-header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sp-meta { display: flex; align-items: center; gap: 8px; }
+.sp-num {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--sub);
+}
+.sp-cat {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 10px; border-radius: 20px;
+  background: rgba(0,0,0,0.07); color: var(--sub);
+}
+.sp-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: rgba(0,0,0,0.08); color: #888;
+  font-size: 11px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s; flex-shrink: 0;
+}
+.sp-close:hover { background: rgba(0,0,0,0.16); color: #333; }
+.sp-name {
+  font-size: 21px; font-weight: 800; color: var(--text);
+  line-height: 1.25; margin-bottom: 13px;
+}
+/* Body */
+.sp-body {
+  padding: 20px 24px 24px; overflow-y: auto; flex: 1;
+  scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.10) transparent;
+  position: relative; z-index: 1;
+}
+.sp-body::-webkit-scrollbar { width: 4px; }
+.sp-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 2px; }
+.sp-desc {
+  font-size: 13px; color: #444; line-height: 1.80; margin: 0 0 22px;
+}
+.sp-section-lbl {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--sub); margin-bottom: 10px;
+}
+.sp-checks {
+  list-style: none; margin: 0 0 24px; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sp-checks li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: #333; line-height: 1.55;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.50);
+  border: 1px solid rgba(255,255,255,0.80);
+  border-radius: 9px;
+}
+.sp-checks li::before {
+  content: '▸'; color: var(--yellow);
+  font-size: 11px; flex-shrink: 0; margin-top: 1px;
+}
+.sp-risk-row {
+  display: flex; align-items: center; gap: 12px; margin-top: 9px;
+}
+.sp-risk-bar-wrap {
+  flex: 1; height: 5px; background: rgba(0,0,0,0.08);
+  border-radius: 3px; overflow: hidden;
+}
+.sp-risk-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.sp-risk-bar.high   { background: var(--red);    width: 90%; }
+.sp-risk-bar.medium { background: var(--orange);  width: 55%; }
+.sp-risk-bar.low    { background: var(--blue);    width: 22%; }
+.sp-risk-txt {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; flex-shrink: 0; min-width: 52px; text-align: right;
+}
+.sp-risk-txt.high   { color: var(--red); }
+.sp-risk-txt.medium { color: var(--orange); }
+.sp-risk-txt.low    { color: var(--blue); }
+
+/* ── Rapport item cliquable ───────────────────────────────── */
+.rcat-item {
+  cursor: pointer;
+  transition: background 0.14s, padding-left 0.14s;
+  border-radius: 5px;
+}
+.rcat-item:hover {
+  background: rgba(255,255,255,0.50);
+  padding-left: 8px;
+}
+
+/* ── Rapport detail popup ─────────────────────────────────── */
+#rpt-popup-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  align-items: center; justify-content: center;
+  background: rgba(25,20,15,0.30);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#rpt-popup-overlay.open { display: flex; }
+.rpt-popup {
+  background: rgba(255,253,250,0.82);
+  backdrop-filter: blur(52px) saturate(1.8);
+  -webkit-backdrop-filter: blur(52px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,0.94);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(70,55,40,0.24), inset 0 1.5px 0 rgba(255,255,255,0.98);
+  width: 480px; max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 80px); overflow-y: auto; display: flex; flex-direction: column;
+  position: relative;
+  animation: sp-in 0.24s cubic-bezier(0.34,1.48,0.64,1) forwards;
+}
+.rpt-popup::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 20px 20px 0 0; pointer-events: none; z-index: 0;
+}
+.rp-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  position: relative; z-index: 1;
+}
+.rp-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.rp-finding-text { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.45; }
+.rp-body { padding: 16px 20px 20px; position: relative; z-index: 1; }
+.rp-src-lbl {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--sub); margin-bottom: 6px;
+}
+.rp-src-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.rp-src-desc {
+  font-size: 12px; color: #555; line-height: 1.65;
+  max-height: 110px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.10) transparent;
+}
+.rp-src-desc::-webkit-scrollbar { width: 4px; }
+.rp-src-desc::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 2px; }
+
+/* ── Historique detail popup ──────────────────────────────── */
+#hist-popup-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  align-items: center; justify-content: center;
+  background: rgba(25,20,15,0.30);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#hist-popup-overlay.open { display: flex; }
+.hp-stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px;
+}
+.hp-stat {
+  background: rgba(255,255,255,0.42);
+  border: 1px solid rgba(255,255,255,0.75);
+  border-radius: 11px; padding: 10px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.hp-stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.hp-stat-val   { font-size: 28px; font-weight: 800; line-height: 1; }
+.hp-score-row  { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.hp-score-num  { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.hp-score-bar-wrap { flex: 1; height: 5px; background: rgba(0,0,0,0.10); border-radius: 3px; overflow: hidden; }
+.hp-score-bar  { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+.hp-findings-section { margin-top: 16px; }
+.hp-findings-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 7px;
+}
+.hp-findings-list { display: flex; flex-direction: column; gap: 5px; max-height: 220px; overflow-y: auto; }
+.hp-finding-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 10px; border-radius: 8px; font-size: 11.5px;
+}
+.hp-fr-high   { background: rgba(220,50,50,0.09);  border: 1px solid rgba(220,50,50,0.18); }
+.hp-fr-medium { background: rgba(220,130,30,0.09); border: 1px solid rgba(220,130,30,0.18); }
+.hp-fr-tag {
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+  background: rgba(0,0,0,0.08); border-radius: 5px;
+  padding: 1px 6px; flex-shrink: 0; color: #555; margin-top: 1px;
+}
+.hp-fr-txt { color: #333; line-height: 1.5; }
+.hp-clean-msg {
+  margin-top: 16px; padding: 14px; text-align: center;
+  background: rgba(26,170,80,0.07); border: 1px solid rgba(26,170,80,0.20);
+  border-radius: 10px; font-size: 13px; font-weight: 600; color: #444;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="titlebar">
+  <div class="tb-pill">
+    <div class="tb-logo">
+      <img src="logo.png" alt="Logo" style="height:38px;width:auto;display:block">
+      <span class="tb-badge">v3</span>
+    </div>
+    <nav class="tb-nav">
+      <button class="tb-tab active" onclick="showPage('accueil')">Accueil</button>
+      <button class="tb-tab" onclick="showPage('scanner')">Scanner</button>
+      <button class="tb-tab" onclick="showPage('sections')">Sections</button>
+      <button class="tb-tab" onclick="showPage('rapport')">Rapport</button>
+      <button class="tb-tab" onclick="showPage('historique')">Historique</button>
+    </nav>
+    <div class="tb-right">
+      <div class="tb-sysinfo" id="sysinfo">Chargement...</div>
+      <button class="tb-wbtn" onclick="sendMsg('MINIMIZE')" title="Réduire">&#8212;</button>
+      <button class="tb-wbtn" onclick="sendMsg('MAXIMIZE')" title="Agrandir">&#9633;</button>
+      <button class="tb-wbtn tb-wbtn-close" onclick="sendMsg('CLOSE')" title="Fermer">&#10005;</button>
+    </div>
+  </div>
+</div>
+
+<div id="content">
+
+<!-- ══ PAGE: ACCUEIL ══════════════════════════════════════════ -->
+<div class="page active" id="page-accueil">
+  <div class="page-title">Tableau de bord</div>
+  <div class="page-sub">Vue d'ensemble de la sécurité du système</div>
+
+  <!-- Row 1 : Score + Stats -->
+  <div class="row row-auto">
+    <div class="card score-card">
+      <div class="score-label">Score de menace</div>
+      <div class="score-badge" id="score-badge">PROPRE</div>
+      <div class="score-value" id="score-val">0</div>
+      <div class="score-denom">/ 100 points</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar" id="score-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-tag"><span class="stat-dot stat-dot-red"></span>HIGH</div>
+      <div class="stat-num stat-num-red" id="d-high">0</div>
+      <div class="stat-desc">Alertes critiques</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-tag"><span class="stat-dot stat-dot-orange"></span>MEDIUM</div>
+      <div class="stat-num stat-num-orange" id="d-medium">0</div>
+      <div class="stat-desc">Alertes modérées</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-tag"><span class="stat-dot stat-dot-blue"></span>LOW</div>
+      <div class="stat-num stat-num-blue" id="d-low">0</div>
+      <div class="stat-desc">Traces mineures</div>
+    </div>
+  </div>
+
+  <!-- Row 2 : Chart + Last scan (remplit l'espace) -->
+  <div class="row row-fill">
+    <div class="card chart-card">
+      <div class="chart-tabs">
+        <span class="chart-tab active"><span class="chart-tab-dot" style="background:var(--red)"></span>Menaces détectées</span>
+        <span class="chart-tab"><span class="chart-tab-dot" style="background:var(--green)"></span>Sections propres</span>
+        <span class="chart-hist-link" onclick="showPage('historique')">Historique</span>
+      </div>
+      <div class="chart-area" id="chart-area" style="flex:1;height:auto">Aucun scan effectué</div>
+    </div>
+    <div class="card last-scan-card">
+      <div class="last-scan-header">
+        <div class="last-scan-title">Dernier scan</div>
+        <button class="btn-new-scan" onclick="showPage('scanner');startScan()">
+          &#9658; Nouveau scan
+        </button>
+      </div>
+      <div class="last-scan-content" id="last-scan-txt">Aucun scan effectué.</div>
+      <div class="last-scan-footer">
+        <span>Progression</span>
+        <span id="last-prog">0 / 35</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3 : Section dots -->
+  <div class="card sections-card row-bottom">
+    <div class="sections-header">
+      <div class="sections-title">Aperçu des sections</div>
+      <span class="sections-link" onclick="showPage('sections')">Voir tout →</span>
+    </div>
+    <div class="dots-grid" id="dots-grid"></div>
+    <div class="dots-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dot-wait)"></div>En attente</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dot-run)"></div>En cours</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dot-clean)"></div>Propre</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dot-alert)"></div>Alerte</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: SCANNER ══════════════════════════════════════════ -->
+<div class="page" id="page-scanner">
+  <div class="scanner-layout">
+    <div class="scanner-sidebar">
+      <div class="card" style="display:flex;flex-direction:column;gap:12px;padding:18px">
+        <div style="font-size:15px;font-weight:800">Scanner</div>
+        <div class="scan-info">
+          Analyse <strong>35 sections</strong> :<br>
+          processus, fichiers, registre, services, drivers, réseau, intégrité jeux.
+        </div>
+        <button class="btn-scan-big" id="btn-start" onclick="startScan()">
+          &#9658; LANCER LE SCAN
+        </button>
+        <button class="btn-stop-scan" id="btn-stop" onclick="stopScan()">
+          &#9632; Arrêter
+        </button>
+        <div class="prog-wrap" id="prog-wrap">
+          <div class="prog-row">
+            <span id="prog-section-lbl">Initialisation...</span>
+            <span id="prog-pct">0%</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+        </div>
+        <div class="divider-label">Jeux couverts</div>
+        <div class="scan-info">
+          GTA V / FiveM<br>
+          Apex Legends<br>
+          NBA 2K25
+        </div>
+        <div class="divider-label">Catégories</div>
+        <div class="scan-info">
+          Processus actifs<br>
+          Fichiers &amp; dossiers<br>
+          Registre Windows<br>
+          Services &amp; pilotes<br>
+          Réseau<br>
+          Windows Defender<br>
+          Prefetch &amp; Historique
+        </div>
+      </div>
+    </div>
+    <div class="scanner-main">
+      <div class="card console-card">
+        <div class="console-topbar">
+          <div class="console-title-row">
+            <div class="console-indicator" id="con-ind"></div>
+            Console
+            <span class="console-status-txt" id="con-status">En attente</span>
+          </div>
+          <div class="console-actions">
+            <button class="btn-console-action" onclick="document.getElementById('console-out').innerHTML=''">Effacer</button>
+            <button class="btn-console-action" onclick="copyLog()">Copier</button>
+            <button class="btn-console-action" onclick="exportLog()">Exporter</button>
+          </div>
+        </div>
+        <div class="console-cur-sec" id="console-cur-sec" style="display:none">
+          <span class="ccs-dot"></span>
+          <span id="ccs-txt">—</span>
+        </div>
+        <div id="console-out">
+          <div style="color:#bbb;text-align:center;margin-top:50px;font-size:12.5px">
+            &#9656; Cliquez sur LANCER LE SCAN pour démarrer...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: SECTIONS ════════════════════════════════════════ -->
+<div class="page" id="page-sections">
+  <div class="page-title">Sections</div>
+  <div class="page-sub">État détaillé des 35 sections analysées</div>
+  <div class="sections-grid" id="sections-detail-grid"></div>
+</div>
+
+<!-- ══ PAGE: RAPPORT ═════════════════════════════════════════ -->
+<div class="page" id="page-rapport">
+  <div class="page-title">Rapport</div>
+  <div class="page-sub">Résultats détaillés du dernier scan</div>
+  <div id="rapport-empty" class="empty-hint">Aucun scan effectué. Lancez un scan pour voir le rapport.</div>
+  <div id="rapport-content" style="display:none">
+    <div class="rapport-layout">
+      <div class="rapport-cats">
+        <div class="card rapport-cat-card">
+          <div class="rcat-header">
+            <span class="rcat-badge rb-high">HIGH</span>
+            <span style="font-size:12px;color:var(--sub)">Menaces critiques</span>
+            <span class="rcat-count" style="color:var(--red)" id="rpt-h-cnt">0</span>
+          </div>
+          <div class="rcat-list" id="rpt-h-list"><div style="color:#bbb;font-size:11.5px">Aucune</div></div>
+        </div>
+        <div class="card rapport-cat-card">
+          <div class="rcat-header">
+            <span class="rcat-badge rb-medium">MEDIUM</span>
+            <span style="font-size:12px;color:var(--sub)">Avertissements</span>
+            <span class="rcat-count" style="color:var(--orange)" id="rpt-m-cnt">0</span>
+          </div>
+          <div class="rcat-list" id="rpt-m-list"><div style="color:#bbb;font-size:11.5px">Aucune</div></div>
+        </div>
+      </div>
+      <div class="rapport-cats">
+        <div class="card rapport-cat-card">
+          <div class="rcat-header">
+            <span class="rcat-badge rb-low">LOW</span>
+            <span style="font-size:12px;color:var(--sub)">Informations</span>
+            <span class="rcat-count" style="color:var(--blue)" id="rpt-l-cnt">0</span>
+          </div>
+          <div class="rcat-list" id="rpt-l-list"><div style="color:#bbb;font-size:11.5px">Aucune</div></div>
+        </div>
+        <div class="card rapport-cat-card">
+          <div class="rcat-header">
+            <span class="rcat-badge rb-ok">OK</span>
+            <span style="font-size:12px;color:var(--sub)">Sections propres</span>
+            <span class="rcat-count" style="color:var(--green)" id="rpt-ok-cnt">0</span>
+          </div>
+          <div class="rcat-list" id="rpt-ok-list"><div style="color:#bbb;font-size:11.5px">Aucune</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: HISTORIQUE ══════════════════════════════════════ -->
+<div class="page" id="page-historique">
+  <div class="page-title">Historique</div>
+  <div class="page-sub">Résultats des scans précédents</div>
+  <div class="hist-list" id="hist-list">
+    <div class="empty-hint">Aucun scan dans l'historique.</div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- Section detail popup -->
+<div id="section-popup-overlay" onclick="closeSectionDetail()">
+  <div class="section-popup" onclick="event.stopPropagation()">
+    <div class="sp-header">
+      <div class="sp-header-top">
+        <div class="sp-meta">
+          <span class="sp-num" id="sp-num"></span>
+          <span class="sp-cat" id="sp-cat"></span>
+        </div>
+        <button class="sp-close" onclick="closeSectionDetail()">&#10005;</button>
+      </div>
+      <div class="sp-name" id="sp-name"></div>
+      <span class="section-badge" id="sp-badge"></span>
+    </div>
+    <div class="sp-body">
+      <p class="sp-desc" id="sp-desc"></p>
+      <div class="sp-section-lbl">Points vérifiés</div>
+      <ul class="sp-checks" id="sp-checks"></ul>
+      <div class="sp-section-lbl">Risque potentiel</div>
+      <div class="sp-risk-row">
+        <div class="sp-risk-bar-wrap"><div class="sp-risk-bar" id="sp-risk-bar"></div></div>
+        <span class="sp-risk-txt" id="sp-risk-txt"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historique detail popup -->
+<div id="hist-popup-overlay" onclick="closeHistDetail()">
+  <div class="rpt-popup" onclick="event.stopPropagation()">
+    <div class="rp-header">
+      <div class="rp-top">
+        <span class="rcat-badge" id="hp-badge"></span>
+        <button class="sp-close" onclick="closeHistDetail()">&#10005;</button>
+      </div>
+      <div class="rp-finding-text" id="hp-date"></div>
+      <div class="hp-score-row">
+        <span class="hp-score-num">Score : <span id="hp-score"></span> / 100</span>
+        <div class="hp-score-bar-wrap"><div class="hp-score-bar" id="hp-score-bar"></div></div>
+      </div>
+    </div>
+    <div class="rp-body">
+      <div class="rp-src-lbl">Résultats du scan</div>
+      <div class="hp-stat-grid">
+        <div class="hp-stat">
+          <div class="hp-stat-label" style="color:var(--red)">HIGH</div>
+          <div class="hp-stat-val"   style="color:var(--red)" id="hp-high"></div>
+        </div>
+        <div class="hp-stat">
+          <div class="hp-stat-label" style="color:var(--orange)">MEDIUM</div>
+          <div class="hp-stat-val"   style="color:var(--orange)" id="hp-medium"></div>
+        </div>
+        <div class="hp-stat">
+          <div class="hp-stat-label" style="color:var(--blue)">LOW</div>
+          <div class="hp-stat-val"   style="color:var(--blue)" id="hp-low"></div>
+        </div>
+        <div class="hp-stat">
+          <div class="hp-stat-label" style="color:var(--green)">OK</div>
+          <div class="hp-stat-val"   style="color:var(--green)" id="hp-ok"></div>
+        </div>
+      </div>
+      <div id="hp-findings" style="display:none">
+        <div class="hp-findings-section" id="hp-high-section" style="display:none">
+          <div class="hp-findings-title" style="color:var(--red)">&#9888; Menaces détectées</div>
+          <div class="hp-findings-list" id="hp-high-list"></div>
+        </div>
+        <div class="hp-findings-section" id="hp-medium-section" style="display:none">
+          <div class="hp-findings-title" style="color:var(--orange)">&#9888; Avertissements</div>
+          <div class="hp-findings-list" id="hp-medium-list"></div>
+        </div>
+        <div class="hp-clean-msg" id="hp-clean-msg" style="display:none">
+          <span style="color:var(--green);font-size:18px">&#10003;</span> Aucune trace suspecte détectée
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rapport detail popup -->
+<div id="rpt-popup-overlay" onclick="closeRapportDetail()">
+  <div class="rpt-popup" onclick="event.stopPropagation()">
+    <div class="rp-header">
+      <div class="rp-top">
+        <span class="rcat-badge" id="rp-badge"></span>
+        <button class="sp-close" onclick="closeRapportDetail()">&#10005;</button>
+      </div>
+      <div class="rp-finding-text" id="rp-finding"></div>
+    </div>
+    <div class="rp-body">
+      <div class="rp-src-lbl">Section source</div>
+      <div class="rp-src-name" id="rp-src-name"></div>
+      <div class="rp-src-desc" id="rp-src-desc"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Section names matching the PS1 ───────────────────────────
+const SECTION_NAMES_RAW = [
+  'Prefetch','Amcache','Shimcache','UserAssist','Fichiers récents',
+  'Jump Lists','BAM','DAM','Dossiers connus','Fichiers connus',
+  'Fichiers supprimés','Corbeille','Dossiers temporaires','Téléchargements','Run / RunOnce',
+  'Services Windows','Pilotes installés','Registre','Programmes installés','Processus actifs',
+  'DLL chargées','Processus anormaux','Injections détectables','Handles ouverts','Drivers non signés',
+  'Drivers récents','Services noyau','Intégrité système','Cache DNS','Connexions réseau',
+  'Pare-feu Windows','Historique réseau',"Outils d'analyse",'Virtualisation','Journaux Windows'
+];
+
+const SECTION_DATA = [
+  { cat:'Forensic', risk:'high',
+    desc:'Lit les fichiers .pf dans C:\\Windows\\Prefetch pour reconstituer l\'historique des exécutables lancés. Chaque fichier Prefetch contient le nom du programme, sa dernière date d\'exécution et son chemin d\'origine. Même après suppression du cheat, l\'entrée Prefetch subsiste.',
+    checks:['Fichiers .pf correspondant à des cheats connus (nom + hash)','Dernière date et heure d\'exécution extraite du fichier .pf','Exécution depuis %TEMP%, %APPDATA%, Bureau ou Téléchargements','Lecture du contenu binaire pour retrouver le chemin d\'origine','Fréquence d\'exécution sur les 30 derniers jours','Exécutables supprimés dont le prefetch subsiste encore'] },
+  { cat:'Forensic', risk:'high',
+    desc:'Monte et parse le fichier Amcache.hve — hive de registre offline tenu par Windows — qui enregistre chaque binaire PE vu sur le système avec son hash, éditeur, taille et date de première apparition. Source forensique fiable même après suppression du fichier.',
+    checks:['Nom du fichier et chemin complet enregistrés dans Amcache','Hash SHA-1 de l\'exécutable (FileId)','Éditeur / signature numérique (Publisher)','Date de première apparition (LastWriteTime de la clé)','Binaires non signés et sans éditeur connu','Exécutables suspects apparus dans les 60 derniers jours'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Extrait les chemins d\'exécutables depuis AppCompatCache (Shimcache), un cache binaire dans le registre HKLM qui liste les programmes exécutés historiquement. Persiste même si les fichiers ont été supprimés, révélant des traces d\'exécution antérieures.',
+    checks:['Extraction des chemins Unicode du blob binaire AppCompatCache','Détection d\'exécutables depuis Temp, Downloads ou Users\\Public','Cheats connus référencés dans le Shimcache','Programmes supprimés encore présents dans le cache','Chemins inhabituels hors des répertoires système standards','Corrélation avec les sections Prefetch et Amcache'] },
+  { cat:'Forensic', risk:'high',
+    desc:'Décode les clés ROT13 du registre UserAssist (HKCU) pour récupérer l\'historique des applications lancées par l\'utilisateur via l\'interface graphique, avec le nombre de lancements et la date exacte de la dernière exécution.',
+    checks:['Décodage ROT13 des noms de clés UserAssist','Nombre de lancements (run count) extrait de la valeur binaire','Date et heure de la dernière exécution (FILETIME 64 bits)','Applications rarement utilisées ou à nom suspect','Exécutions depuis des emplacements inhabituels','Corrélation avec les sections BAM et Prefetch'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Analyse le dossier Recent et les fichiers LNK associés pour identifier les exécutables, archives et scripts récemment ouverts. Les raccourcis LNK pointant vers des fichiers supprimés sont particulièrement significatifs pour la détection post-suppression.',
+    checks:['Fichiers LNK pointant vers des exécutables .exe, .dll, .bat, .ps1','Archives .zip, .rar, .7z récemment ouvertes','Horodatage de dernière ouverture pour chaque entrée','Fichiers pointant vers des cheats ou des emplacements suspects','LNK vers des fichiers supprimés (target non existant)','Tri par date pour reconstituer la chronologie'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Inspecte les fichiers AutomaticDestinations des Jump Lists (OLE Compound Documents) pour identifier les applications récemment utilisées et les fichiers qu\'elles ont ouverts. Lecture binaire pour extraire les chemins même si les fichiers sources ont été supprimés.',
+    checks:['Fichiers .automaticDestinations-ms dans AppData\\Recent','Extraction de chaînes Unicode depuis le binaire OLE','Fréquence d\'utilisation des applications référencées','Fichiers ouverts par des programmes suspects','Date de dernière modification du fichier Jump List','Cheats ou outils de debug référencés dans les Jump Lists'] },
+  { cat:'Forensic', risk:'high',
+    desc:'Interroge le Background Activity Monitor (BAM) — registre HKLM maintenu par le kernel Windows — qui enregistre tous les exécutables lancés avec leur horodatage exact. Source forensique de premier plan : ne peut pas être facilement effacée par un utilisateur.',
+    checks:['Liste complète des programmes lancés par SID utilisateur','Horodatage FILETIME 64 bits de chaque exécution','Exécutables depuis Temp, Downloads ou emplacements inhabituels','Cheats connus identifiés par correspondance de nom','Activité sur les 7 derniers jours typiquement','Source non altérable par l\'utilisateur standard'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Interroge le Desktop Activity Moderator (DAM) — registre similaire au BAM mais focalisé sur l\'activité de bureau et les applications en arrière-plan — pour identifier des exécutions de programmes non interactifs potentiellement utilisés pour du cheating.',
+    checks:['Programmes exécutés en arrière-plan (non-interactive)','Fréquence et horodatage des activations','Exécutables depuis emplacements inhabituels','Corrélation avec les entrées BAM pour validation croisée','Programmes à exécution périodique suspecte','Processus déclenchés automatiquement sans action utilisateur'] },
+  { cat:'Fichiers', risk:'medium',
+    desc:'Scan ciblé des dossiers %APPDATA%, %LOCALAPPDATA%, %PROGRAMDATA% et %TEMP% pour détecter des sous-dossiers cachés (attribut Hidden) ou créés récemment avec des noms suspects. Les cheats créent souvent ces dossiers pour stocker leur configuration et leurs logs.',
+    checks:['Dossiers avec attribut Hidden dans AppData et LocalAppData','Dossiers créés dans les 14 derniers jours','Noms correspondant à des cheats connus','Sous-dossiers dans ProgramData sans application parente identifiable','Dossiers cachés dans %TEMP% avec contenu exécutable','Corrélation avec les sections Amcache et UserAssist'] },
+  { cat:'Fichiers', risk:'high',
+    desc:'Inventaire des binaires (EXE, DLL, SYS, BAT, PS1) présents dans AppData, LocalAppData, Temp, Bureau et Documents créés ou modifiés dans les 30 derniers jours. Contrôle de signature numérique systématique pour chaque fichier identifié.',
+    checks:['Exécutables .exe et .dll non signés dans AppData ou Temp','Fichiers .sys (drivers) dans des emplacements non-système','Scripts .bat et .ps1 récents avec contenu suspect','Vérification de la signature numérique (Authenticode)','Date de création et de modification pour chronologie','Taille et éditeur de chaque binaire trouvé'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Analyse le journal USN (Update Sequence Number) NTFS pour détecter des suppressions massives ou ciblées de fichiers exécutables, indices d\'un effacement de traces post-cheat. Complété par les événements d\'audit de suppression (Event ID 4663).',
+    checks:['Lecture du journal USN via fsutil usn readjournal','Suppressions d\'exécutables .exe, .dll, .sys dans les 48h','Pics de suppression inhabituels en volume','Renommages suspect avant suppression','Événements 4663 (audit de suppression) dans le journal Security','Corrélation dates de suppression / sessions de jeu'] },
+  { cat:'Fichiers', risk:'medium',
+    desc:'Scanne la Corbeille Windows ($Recycle.Bin) via l\'API Shell et en accès direct pour identifier des exécutables, DLLs, drivers ou archives supprimés. Les cheats supprimés précipitamment finissent souvent dans la Corbeille avant d\'être vidés.',
+    checks:['Exécutables .exe, .dll, .sys dans la Corbeille','Archives .zip, .rar, .7z supprimées récemment','Date de suppression et taille de chaque fichier','Nom d\'origine avant suppression','Fichiers correspondant à des signatures de cheats connus','Accès via COM Shell.Application pour récupérer les métadonnées'] },
+  { cat:'Fichiers', risk:'medium',
+    desc:'Inspecte les dossiers temporaires (%TEMP%, %TMP%, Windows\\Temp, LocalAppData\\Temp) pour des exécutables, DLLs et archives récemment créés. Ces emplacements sont utilisés par les loaders de cheats comme zone de travail temporaire.',
+    checks:['Exécutables .exe et .dll créés dans les 7 derniers jours','Archives .zip, .rar, .7z créées dans les 3 derniers jours','Signature numérique (ou absence) de chaque binaire','Taille et date de création des fichiers suspects','Scripts .bat, .ps1 créés par des loaders de cheats','Corrélation avec les sections Prefetch et BAM'] },
+  { cat:'Fichiers', risk:'medium',
+    desc:'Analyse le dossier Téléchargements de l\'utilisateur pour identifier les exécutables, archives et scripts téléchargés depuis Internet. Lecture du flux alternatif Zone.Identifier (ADS) pour confirmer l\'origine Internet et vérification de la signature numérique.',
+    checks:['Exécutables non signés téléchargés depuis Internet (ZoneId=3)','Archives contenant des payloads suspects','Date de téléchargement et taille de chaque fichier','Noms de fichiers correspondant à des cheats connus','Zone.Identifier ADS pour confirmer l\'origine externe','Signature numérique et éditeur pour chaque binaire'] },
+  { cat:'Persistance', risk:'high',
+    desc:'Contrôle exhaustif des 5 clés Run/RunOnce du registre et des deux dossiers Startup pour détecter des entrées de démarrage automatique non légitimes. Vérification de la signature numérique de chaque exécutable référencé.',
+    checks:['HKCU et HKLM Run / RunOnce (5 clés)','Dossier Startup utilisateur et commun','Exécutables depuis Temp ou AppData (rouge)','Binaires non signés en démarrage automatique','Noms d\'entrées correspondant à des cheats','Chemins d\'exécutables non existants (nettoyage incomplet)'] },
+  { cat:'Persistance', risk:'high',
+    desc:'Inventaire complet des services Windows installés avec vérification de leur signature numérique, chemin d\'exécutable et mode de démarrage. Détection de services se lançant depuis des emplacements inhabituels comme Temp ou AppData.',
+    checks:['Services pointant vers des exécutables dans Temp ou AppData','Services avec noms correspondant à des cheats connus','Binaires de service non signés en démarrage automatique','Mode de démarrage et état actuel de chaque service','Chemin d\'exécutable et éditeur pour chaque service suspect','Corrélation avec les événements 7045 du journal System'] },
+  { cat:'Persistance', risk:'high',
+    desc:'Inventaire des pilotes kernel chargés avec vérification de signature numérique pour chaque fichier .sys. Détection de drivers non signés, de drivers tiers récents et de signatures de drivers utilisés pour du BYOVD (Bring Your Own Vulnerable Driver).',
+    checks:['Pilotes en cours d\'exécution sans signature Microsoft','Drivers tiers signés par un éditeur inconnu','Noms de drivers correspondant à des cheats kernel-level','Chemin d\'installation (hors System32\\drivers = suspect)','Corrélation avec les sections Services noyau et Drivers récents','BYOVD : drivers légitimes vulnérables exploités'] },
+  { cat:'Forensic', risk:'medium',
+    desc:'Analyse ciblée du registre Windows : clés de cheats connus, entrées Uninstall révélant des installations passées, clés HKCU\\Software récemment modifiées et entrées orphelines laissées après désinstallation incomplète.',
+    checks:['Clés de cheats connus : Kiddions, Stand, Cherax, Ozark, Eulen…','Entrées Uninstall avec noms de cheats (HKLM et HKCU)','Clés HKCU\\Software modifiées dans les 14 derniers jours','Clés WinRing0, dbk64 et autres artefacts de drivers cheat','MuiCache révélant des exécutables lancés récemment','AppCompatFlags\\Compatibility stockant des exécutions passées'] },
+  { cat:'Forensic', risk:'low',
+    desc:'Lecture des clés Uninstall du registre pour lister les logiciels installés avec leur date d\'installation. Filtrage des installations récentes (14 jours) et des noms correspondant à des cheats ou outils de triche.',
+    checks:['Logiciels installés dans les 14 derniers jours','Noms correspondant à des cheats ou outils de modding','Date d\'installation via la valeur InstallDate (format YYYYMMDD)','Éditeur et version pour chaque programme suspect','Programmes de bypass ou loaders installés','Cheat Engine, OpenIV et outils de modding détectés'] },
+  { cat:'Processus', risk:'high',
+    desc:'État actuel des processus en mémoire : vérification de signature numérique, chemin d\'exécution et consommation mémoire. Détection de processus non signés s\'exécutant depuis des emplacements non standard comme Temp ou AppData\\Roaming.',
+    checks:['Nom de processus correspondant à des cheats connus','Chemin d\'exécutable depuis Temp ou AppData\\Roaming','Signature numérique absente pour processus non-système','Consommation mémoire anormale (> 50 MB) pour binaire non signé','Processus sans fenêtre visible dans AppData ou Temp','Corrélation PID avec les connexions réseau actives'] },
+  { cat:'Processus', risk:'high',
+    desc:'Analyse des modules DLL chargés par les processus de jeux actifs (GTA5, FiveM, Apex, CS2). Détection de DLLs chargées depuis des emplacements inhabituels et de DLLs non signées présentes dans les processus de jeu.',
+    checks:['Modules DLL des processus de jeu listés exhaustivement','DLLs chargées depuis Temp, AppData ou Users\\Public','DLLs non signées dans un contexte de processus de jeu','DLLs suspectes dans System32 (minhook, cheat, inject…)','Chemin complet de chaque module suspect identifié','Corrélation avec la section Injections détectables'] },
+  { cat:'Processus', risk:'high',
+    desc:'Vérification de la cohérence des processus système critiques : détection d\'usurpation de nom (processus légitime lancé depuis un mauvais chemin) et de typosquatting (noms légèrement différents de ceux des processus système).',
+    checks:['Chemin attendu vs chemin réel pour svchost, lsass, csrss…','Processus svchost.exe depuis un chemin autre que System32','Typosquatting : svch0st, Isass, windov, expl0rer…','Longueur et structure du nom comparées au processus légitime','Nombre d\'instances anormal pour un processus système','Processus légitime sans processus parent attendu'] },
+  { cat:'Processus', risk:'high',
+    desc:'Recherche des indicateurs d\'injection de code dans les processus de jeu actifs : DLLs chargées depuis des chemins non standards, modules non signés dans un contexte de processus protégé, et processus cachés sans fenêtre dans AppData ou Temp.',
+    checks:['Modules DLL des processus de jeu depuis Temp ou AppData','DLLs non signées dans des processus de jeu (hors Steam)','Processus sans fenêtre dans AppData\\Roaming ou Temp','Incohérences de chemin pour les modules chargés','Modules depuis des partages réseau ou chemins UNC','Corrélation avec la section DLL chargées'] },
+  { cat:'Processus', risk:'medium',
+    desc:'Analyse du nombre de handles ouverts par processus pour détecter des comportements anormaux. Un processus avec des milliers de handles sur des fichiers système peut indiquer un outil de surveillance ou un cheat en cours d\'injection.',
+    checks:['Processus avec plus de 2000 handles ouverts','Handles anormalement élevés (> 5000) pour un binaire non signé','Top 10 des processus par nombre de handles','Total de handles sur le système comme indicateur global','Processus accédant à un grand nombre de fichiers système','Corrélation avec la section Injections détectables'] },
+  { cat:'Drivers', risk:'high',
+    desc:'Analyse de signature Authenticode de chaque fichier .sys dans C:\\Windows\\System32\\drivers. Un driver non signé ou avec un hash invalide (fichier modifié après signature) est un indicateur fort d\'un cheat kernel-level.',
+    checks:['Signature Authenticode de chaque .sys dans System32\\drivers','Drivers avec statut NotSigned — jamais signés','Drivers avec statut HashMismatch — modifiés après signature','Corrélation avec les drivers connus pour du BYOVD','Éditeur et chaîne de certificat pour les drivers signés','Drivers signés par des autorités de certification inconnues'] },
+  { cat:'Drivers', risk:'high',
+    desc:'Inventaire des drivers modifiés ou créés dans les 30 derniers jours dans System32\\drivers. Une installation récente d\'un driver tiers non-Microsoft est un indicateur fort d\'un cheat kernel, particulièrement si la signature est absente.',
+    checks:['Drivers dont la date de modification est < 30 jours','Drivers tiers signés par un éditeur non-Microsoft','Drivers récents avec signature absente (HIGH)','Date exacte de modification pour chronologie forensique','Corrélation avec les événements 7045 (service installé)','Drivers récents avec noms correspondant à des cheats connus'] },
+  { cat:'Drivers', risk:'high',
+    desc:'Inventaire des services en mode kernel (Win32_SystemDriver) actuellement en cours d\'exécution, avec vérification de signature. Les cheats kernel installent leur driver comme service système pour survivre aux redémarrages.',
+    checks:['Services noyau actifs non-Microsoft en cours d\'exécution','Drivers de service sans signature numérique valide','Noms de services correspondant à des cheats connus','Chemin d\'exécutable et éditeur pour chaque service kernel','Comparaison avec la liste des services système légitimes','Corrélation avec les sections Drivers non signés et récents'] },
+  { cat:'Défense', risk:'high',
+    desc:'Vérification complète de l\'intégrité des défenses Windows : statut Defender (temps réel, Tamper Protection, définitions), services de sécurité critiques, exclusions suspectes et état du Secure Boot. Les cheats désactivent ces protections avant installation.',
+    checks:['Windows Defender : protection temps réel et antivirus actif','Tamper Protection non compromise (source = Antimalware)','Services critiques WinDefend, MpsSvc, EventLog, CryptSvc actifs','Exclusions Defender pointant vers AppData, Temp ou jeux','Secure Boot activé (UEFI)','Date des définitions antivirales (fraîcheur)'] },
+  { cat:'Réseau', risk:'medium',
+    desc:'Lecture du cache DNS local via ipconfig /displaydns pour détecter des résolutions récentes de domaines de vente ou distribution de cheats. Même si les connexions sont terminées, les entrées restent en cache pendant des heures.',
+    checks:['Domaines de cheats populaires dans le cache (neverlose.cc, skeet.cc…)','Résolutions récentes de sites de distribution de loaders','Domaines de services C2 (Command & Control) de cheats','Nombre total d\'entrées DNS comme indicateur d\'activité','Domaines de contournement d\'anti-cheat','Corrélation avec la section Connexions réseau'] },
+  { cat:'Réseau', risk:'high',
+    desc:'Analyse en temps réel des connexions TCP établies et des ports en écoute. Corrélation des connexions avec les processus qui les ont ouvertes, pour identifier des cheats communicant avec leurs serveurs de licence ou de mise à jour.',
+    checks:['Connexions TCP établies par des processus suspects','Processus de jeu avec connexions vers des IPs non-officielles','Ports en écoute inhabituels ouverts par des processus non signés','Processus non signés faisant des connexions sur des ports > 50000','Processus suspects en écoute sur des ports locaux','Corrélation PID connexion / processus pour identification'] },
+  { cat:'Réseau', risk:'medium',
+    desc:'Analyse des règles du pare-feu Windows pour détecter des exceptions ajoutées par des cheats (autorisation de trafic) ou du blocage d\'anti-cheats (interdiction de connexion). Vérification de l\'état des profils pare-feu.',
+    checks:['Règles bloquant EasyAntiCheat, BattlEye, Vanguard ou FACEIT','Règles avec noms correspondant à des cheats connus','Profils pare-feu (Domain, Private, Public) désactivés','Règles autorisant des exécutables non signés en entrée','Règles créées depuis des emplacements Temp ou AppData','Nombre total de règles personnalisées comme indicateur'] },
+  { cat:'Réseau', risk:'low',
+    desc:'Inventaire des réseaux WiFi mémorisés, de l\'historique des connexions réseau via le registre NetworkList, du cache ARP actif et du contenu du fichier hosts pour détecter des blocages d\'anti-cheats ou des redirections malveillantes.',
+    checks:['Profils WiFi mémorisés (netsh wlan show profiles)','Historique des réseaux connectés (HKLM NetworkList)','Cache ARP actif : correspondances IP/MAC','Fichier hosts : entrées bloquant des anti-cheats','Redirections dans hosts vers des IPs inconnues','Entrées hosts non standards hors localhost'] },
+  { cat:'Outils', risk:'medium',
+    desc:'Détection d\'outils d\'analyse, débogage, inspection mémoire et interception réseau installés ou en cours d\'exécution. Leur présence n\'est pas une preuve directe mais constitue un contexte forensique important, surtout combinée avec d\'autres alertes.',
+    checks:['Outils en cours : x64dbg, OllyDbg, dnSpy, Cheat Engine…','Dossiers d\'installation : IDA Pro, Process Hacker, Wireshark…','Prefetch révélant une utilisation passée de ces outils','Wireshark et Fiddler pour interception de trafic de jeu','Xenos Injector et injecteurs DLL détectés','ReClass.NET et outils de mapping mémoire'] },
+  { cat:'Système', risk:'low',
+    desc:'Détection d\'hyperviseurs, de machines virtuelles et de leurs artefacts systèmes. Les environnements virtualisés peuvent être utilisés pour contourner la détection des anti-cheats ou pour tester des cheats en isolation.',
+    checks:['Modèle et fabricant VM : VMware, VirtualBox, QEMU, Parallels','Services VM actifs : vmtools, VBoxService, xenbus…','Artefacts registre : VMware Inc., VirtualBox Guest Additions…','Hyper-V ou VBS (Virtualization Based Security) actif','Paramètres CPUID révélant un hyperviseur','Corrélation avec la présence d\'outils d\'analyse'] },
+  { cat:'Forensic', risk:'high',
+    desc:'Analyse approfondie des journaux d\'événements Windows : nouveaux services installés (7045), journal de sécurité effacé (1102), création de processus suspects (4688), scripts PowerShell malveillants (4104), crashes d\'anti-cheats (1000) et chargement de drivers non signés (219).',
+    checks:['Event 7045 : nouveaux services installés (14 derniers jours)','Event 1102 : journal de sécurité effacé (30 jours)','Event 4688 : création de processus suspects (48h)','Event 4104 : script blocks PowerShell suspects (3 jours)','Event 1000 : crashs EasyAntiCheat, BattlEye, Vanguard (7 jours)','Event 219 : chargement de drivers suspects (7 jours)'] }
+];
+
+// ── State ─────────────────────────────────────────────────────
+const S = {
+  scanning: false,
+  lines: [],
+  results: { high:[], medium:[], low:[], ok:[] },
+  sections: Array.from({length:35}, (_,i) => ({
+    num: String(i+1).padStart(2,'0'),
+    state: 'wait'
+  })),
+  currentSection: -1,
+  history: JSON.parse(localStorage.getItem('reek_hist')||'[]')
+};
+
+// ── Init ──────────────────────────────────────────────────────
+function init() {
+  buildDots();
+  buildSectionGrid();
+  renderHistory();
+  loadSysInfo();
+  document.addEventListener('keydown', e => { if (e.key==='Escape') { closeSectionDetail(); closeRapportDetail(); closeHistDetail(); } });
+}
+
+function loadSysInfo() {
+  try {
+    const os = navigator.userAgent.match(/Windows NT ([\d.]+)/);
+    const host = 'DESKTOP-LOCAL';
+    const ver = os ? 'Windows NT ' + os[1] : 'Windows';
+    document.getElementById('sysinfo').textContent = host + ' — ' + ver;
+  } catch(e) {
+    document.getElementById('sysinfo').textContent = 'Windows';
+  }
+  sendMsg('GET_SYSINFO');
+}
+
+// Called by C# to set system info string
+function setSysInfo(str) {
+  document.getElementById('sysinfo').textContent = str;
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tb-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const idx = ['accueil','scanner','sections','rapport','historique'].indexOf(id);
+  if (idx>=0) document.querySelectorAll('.tb-tab')[idx].classList.add('active');
+}
+
+// ── C# bridge ─────────────────────────────────────────────────
+function sendMsg(msg) {
+  try {
+    if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(msg);
+    else if (window.external && window.external.notify) window.external.notify(msg);
+  } catch(e){}
+}
+
+// Called by C# timer — one PS1 output line at a time
+function receiveLine(raw) {
+  if (!raw) return;
+  S.lines.push(raw);
+  appendLine(raw);
+  parseLine(raw);
+}
+
+// Called by C# when PS1 exits
+function scanFinished() {
+  S.scanning = false;
+  setIndicator('done','Scan terminé');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').classList.remove('show');
+  document.getElementById('prog-wrap').classList.remove('show');
+  document.getElementById('console-cur-sec').style.display = 'none';
+
+  // Mark remaining sections as clean if no alert
+  S.sections.forEach(sec => {
+    if (sec.state === 'wait' || sec.state === 'running') sec.state = 'clean';
+  });
+  updateDots();
+  buildSectionGrid();
+  updateDashboard();
+  updateRapport();
+  saveHistory();
+  renderHistory();
+
+  document.getElementById('last-prog').textContent = '35 / 35';
+  document.getElementById('last-scan-txt').textContent =
+    'Terminé le ' + new Date().toLocaleString('fr-FR') +
+    ' — HIGH: ' + S.results.high.length +
+    ', MEDIUM: ' + S.results.medium.length +
+    ', LOW: ' + S.results.low.length;
+}
+
+// ── Scan control ──────────────────────────────────────────────
+function startScan() {
+  if (S.scanning) return;
+  S.scanning = true;
+  S.lines = [];
+  S.results = { high:[], medium:[], low:[], ok:[] };
+  S.currentSection = -1;
+  S.sections.forEach(s => s.state = 'wait');
+
+  document.getElementById('console-out').innerHTML = '';
+  setIndicator('on','Scan en cours...');
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-stop').classList.add('show');
+  document.getElementById('prog-wrap').classList.add('show');
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-pct').textContent = '0%';
+  document.getElementById('prog-section-lbl').textContent = 'Initialisation...';
+
+  updateDots();
+  document.getElementById('last-scan-txt').textContent = 'Scan en cours...';
+  document.getElementById('score-val').textContent = '0';
+  document.getElementById('score-bar').style.width = '0%';
+
+  sendMsg('START_SCAN');
+}
+
+function stopScan() {
+  sendMsg('STOP_SCAN');
+  S.scanning = false;
+  setIndicator('','Arrêté');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').classList.remove('show');
+  document.getElementById('prog-wrap').classList.remove('show');
+}
+
+// ── Console output ────────────────────────────────────────────
+function appendLine(raw) {
+  const out = document.getElementById('console-out');
+  const t = raw.trim();
+
+  // Section header → bandeau visuel distinct
+  const secMatch = t.match(/^(\d{2})\.\s+(.+)$/);
+  if (secMatch) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cl-section';
+    const badge = document.createElement('span');
+    badge.className = 'cl-sec-num';
+    badge.textContent = secMatch[1];
+    const name = document.createElement('span');
+    name.className = 'cl-sec-name';
+    name.textContent = secMatch[2];
+    wrap.appendChild(badge);
+    wrap.appendChild(name);
+    out.appendChild(wrap);
+    out.scrollTop = out.scrollHeight;
+    return;
+  }
+
+  const div = document.createElement('div');
+  if      (t.includes('[HIGH]'))   div.className = 'cl-high';
+  else if (t.includes('[MEDIUM]')) div.className = 'cl-medium';
+  else if (t.includes('[LOW]'))    div.className = 'cl-low';
+  else if (t.includes('[OK]'))     div.className = 'cl-ok';
+  else if (t.includes('[~]'))      div.className = 'cl-tilde';
+  else if (t.startsWith('REEK') || t.startsWith('Reek')) div.className = 'cl-header';
+  else if (t.startsWith('Date'))   div.className = 'cl-date';
+  else if (t === '')               { out.scrollTop = out.scrollHeight; return; }
+  else                             div.style.color = '#444';
+  div.textContent = raw;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+// ── Parse line ────────────────────────────────────────────────
+function parseLine(raw) {
+  const t = raw.trim();
+
+  // Section start → update progress + dots
+  const secMatch = t.match(/^\s*(\d{2})\./);
+  if (secMatch) {
+    const n = parseInt(secMatch[1]) - 1;
+    if (S.currentSection >= 0 && S.currentSection < 35) {
+      if (S.sections[S.currentSection].state === 'running')
+        S.sections[S.currentSection].state = 'clean';
+    }
+    S.currentSection = n;
+    if (n >= 0 && n < 35) S.sections[n].state = 'running';
+    updateDots();
+    buildSectionGrid();
+
+    const pct = Math.round(((n+1)/35)*100);
+    document.getElementById('prog-fill').style.width = pct+'%';
+    document.getElementById('prog-pct').textContent = pct+'%';
+    const secLabel = 'Section '+(n+1)+' / 35 — '+(SECTION_NAMES_RAW[n]||'');
+    document.getElementById('prog-section-lbl').textContent = secLabel;
+    document.getElementById('last-prog').textContent = (n+1)+' / 35';
+
+    // Bandeau sticky "section en cours"
+    const ccs = document.getElementById('console-cur-sec');
+    ccs.style.display = 'flex';
+    document.getElementById('ccs-txt').textContent = secLabel;
+  }
+
+  // Result tracking
+  if (t.includes('[HIGH]')) {
+    S.results.high.push({text: t.replace(/\[HIGH\]/,'').trim(), sec: S.currentSection});
+    if (S.currentSection >= 0) S.sections[S.currentSection].state = 'alert';
+    updateDots();
+  } else if (t.includes('[MEDIUM]')) {
+    S.results.medium.push({text: t.replace(/\[MEDIUM\]/,'').trim(), sec: S.currentSection});
+    if (S.currentSection >= 0 && S.sections[S.currentSection].state !== 'alert')
+      S.sections[S.currentSection].state = 'medium';
+    updateDots();
+  } else if (t.includes('[LOW]')) {
+    S.results.low.push({text: t.replace(/\[LOW\]/,'').trim(), sec: S.currentSection});
+  } else if (t.includes('[OK]')) {
+    S.results.ok.push({text: t.replace(/\[OK\]/,'').trim(), sec: S.currentSection});
+  }
+
+  // Live dashboard update
+  document.getElementById('d-high').textContent = S.results.high.length;
+  document.getElementById('d-medium').textContent = S.results.medium.length;
+  document.getElementById('d-low').textContent = S.results.low.length;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+function updateDashboard() {
+  const h = S.results.high.length, m = S.results.medium.length, l = S.results.low.length;
+  const score = Math.min(100, h*25 + m*8 + l*2);
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('score-bar').style.width = score+'%';
+
+  const badge = document.getElementById('score-badge');
+  if (h > 0)      { badge.textContent='MENACES';   badge.className='score-badge danger'; }
+  else if (m > 0) { badge.textContent='ATTENTION';  badge.className='score-badge warn'; }
+  else            { badge.textContent='PROPRE';     badge.className='score-badge'; }
+}
+
+// ── Dots ──────────────────────────────────────────────────────
+function buildDots() {
+  const grid = document.getElementById('dots-grid');
+  grid.innerHTML = '';
+  S.sections.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = 'dot-'+i;
+    d.title = SECTION_NAMES_RAW[i]||('Section '+(i+1));
+    grid.appendChild(d);
+  });
+}
+
+function updateDots() {
+  S.sections.forEach((sec,i) => {
+    const d = document.getElementById('dot-'+i);
+    if (!d) return;
+    d.className = 'dot';
+    if      (sec.state==='running') d.classList.add('running');
+    else if (sec.state==='clean')   d.classList.add('clean');
+    else if (sec.state==='alert')   d.classList.add('alert');
+    else if (sec.state==='medium')  d.classList.add('medium');
+  });
+}
+
+// ── Sections detail grid ──────────────────────────────────────
+function buildSectionGrid() {
+  const grid = document.getElementById('sections-detail-grid');
+  grid.innerHTML = S.sections.map((sec,i) => {
+    let bclass = 'sb-wait', blabel = 'En attente';
+    if      (sec.state==='running') { bclass='sb-run';    blabel='En cours'; }
+    else if (sec.state==='alert')   { bclass='sb-high';   blabel='HIGH'; }
+    else if (sec.state==='medium')  { bclass='sb-medium'; blabel='MEDIUM'; }
+    else if (sec.state==='clean')   { bclass='sb-clean';  blabel='Propre'; }
+    return `<div class="section-item" onclick="showSectionDetail(${i})" style="cursor:pointer">
+      <div class="section-num">${sec.num}</div>
+      <div class="section-name">${SECTION_NAMES_RAW[i]||sec.name}</div>
+      <div class="section-badge ${bclass}">${blabel}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Section detail popup ──────────────────────────────────────
+function showSectionDetail(i) {
+  const sec  = S.sections[i];
+  const data = SECTION_DATA[i] || {};
+  let bclass = 'sb-wait', blabel = 'En attente';
+  if      (sec.state==='running') { bclass='sb-run';    blabel='En cours'; }
+  else if (sec.state==='alert')   { bclass='sb-high';   blabel='HIGH'; }
+  else if (sec.state==='medium')  { bclass='sb-medium'; blabel='MEDIUM'; }
+  else if (sec.state==='clean')   { bclass='sb-clean';  blabel='Propre'; }
+  document.getElementById('sp-num').textContent  = 'Section ' + sec.num;
+  document.getElementById('sp-cat').textContent  = data.cat  || '';
+  document.getElementById('sp-name').textContent = SECTION_NAMES_RAW[i] || '';
+  const badge = document.getElementById('sp-badge');
+  badge.className   = 'section-badge ' + bclass;
+  badge.textContent = blabel;
+  document.getElementById('sp-desc').textContent = data.desc || '';
+  document.getElementById('sp-checks').innerHTML = (data.checks || [])
+    .map(c => '<li>' + esc(c) + '</li>').join('');
+  const risk = data.risk || 'low';
+  document.getElementById('sp-risk-bar').className = 'sp-risk-bar ' + risk;
+  const txt = document.getElementById('sp-risk-txt');
+  txt.className   = 'sp-risk-txt ' + risk;
+  txt.textContent = risk==='high' ? 'ÉLEVÉ' : risk==='medium' ? 'MODÉRÉ' : 'FAIBLE';
+  document.getElementById('section-popup-overlay').classList.add('open');
+}
+
+function closeSectionDetail() {
+  document.getElementById('section-popup-overlay').classList.remove('open');
+}
+
+// ── Rapport detail popup ──────────────────────────────────────
+function showRapportDetail(key, idx) {
+  const item = S.results[key][idx];
+  if (!item) return;
+  const secIdx = item.sec;
+  const secName = secIdx >= 0 ? (SECTION_NAMES_RAW[secIdx] || '') : '';
+  const secData = (secIdx >= 0 ? SECTION_DATA[secIdx] : null) || {};
+  const badgeMap = {
+    high:   ['rb-high',   'HIGH'],
+    medium: ['rb-medium', 'MEDIUM'],
+    low:    ['rb-low',    'LOW'],
+    ok:     ['rb-ok',     'OK']
+  };
+  const [bclass, blabel] = badgeMap[key] || ['rb-ok', key.toUpperCase()];
+  const badge = document.getElementById('rp-badge');
+  badge.className   = 'rcat-badge ' + bclass;
+  badge.textContent = blabel;
+  document.getElementById('rp-finding').textContent  = item.text;
+  document.getElementById('rp-src-name').textContent = secIdx >= 0
+    ? 'Section ' + String(secIdx+1).padStart(2,'0') + ' — ' + secName
+    : 'Section inconnue';
+  document.getElementById('rp-src-desc').textContent = secData.desc || '';
+  document.getElementById('rpt-popup-overlay').classList.add('open');
+}
+
+function closeRapportDetail() {
+  document.getElementById('rpt-popup-overlay').classList.remove('open');
+}
+
+// ── Historique detail popup ───────────────────────────────────
+function showHistDetail(idx) {
+  const h = S.history[idx];
+  if (!h) return;
+  const score = Math.min(100, (h.high||0)*25 + (h.medium||0)*8 + (h.low||0)*2);
+  const badge = document.getElementById('hp-badge');
+  if (h.high > 0)       { badge.className='rcat-badge rb-high';   badge.textContent='MENACES'; }
+  else if (h.medium > 0){ badge.className='rcat-badge rb-medium'; badge.textContent='ATTENTION'; }
+  else                  { badge.className='rcat-badge rb-ok';     badge.textContent='PROPRE'; }
+  document.getElementById('hp-date').textContent   = '\u{1F550} ' + h.date;
+  document.getElementById('hp-score').textContent  = score;
+  const bar = document.getElementById('hp-score-bar');
+  bar.style.width = score + '%';
+  bar.style.background = h.high > 0 ? 'var(--red)' : h.medium > 0 ? 'var(--orange)' : 'var(--green)';
+  document.getElementById('hp-high').textContent   = h.high   || 0;
+  document.getElementById('hp-medium').textContent = h.medium || 0;
+  document.getElementById('hp-low').textContent    = h.low    || 0;
+  document.getElementById('hp-ok').textContent     = h.ok     || 0;
+
+  // Findings détaillés
+  const hf = h.highFindings   || [];
+  const mf = h.mediumFindings || [];
+  const hasFindings = hf.length > 0 || mf.length > 0;
+
+  document.getElementById('hp-findings').style.display = hasFindings || h.high === 0 ? '' : 'none';
+
+  const hSec = document.getElementById('hp-high-section');
+  const mSec = document.getElementById('hp-medium-section');
+  const cleanMsg = document.getElementById('hp-clean-msg');
+
+  if (hf.length > 0) {
+    hSec.style.display = '';
+    document.getElementById('hp-high-list').innerHTML = hf.map(f =>
+      `<div class="hp-finding-row hp-fr-high">
+        <span class="hp-fr-tag">${SECTION_NAMES_RAW[f.sec] || 'Général'}</span>
+        <span class="hp-fr-txt">${f.text.replace(/\[HIGH\]/g,'').trim()}</span>
+      </div>`
+    ).join('');
+  } else { hSec.style.display = 'none'; }
+
+  if (mf.length > 0) {
+    mSec.style.display = '';
+    document.getElementById('hp-medium-list').innerHTML = mf.map(f =>
+      `<div class="hp-finding-row hp-fr-medium">
+        <span class="hp-fr-tag">${SECTION_NAMES_RAW[f.sec] || 'Général'}</span>
+        <span class="hp-fr-txt">${f.text.replace(/\[MEDIUM\]/g,'').trim()}</span>
+      </div>`
+    ).join('');
+  } else { mSec.style.display = 'none'; }
+
+  cleanMsg.style.display = (!hasFindings) ? '' : 'none';
+  document.getElementById('hp-findings').style.display = '';
+  document.getElementById('hist-popup-overlay').classList.add('open');
+}
+
+function closeHistDetail() {
+  document.getElementById('hist-popup-overlay').classList.remove('open');
+}
+
+// ── Rapport ───────────────────────────────────────────────────
+function updateRapport() {
+  document.getElementById('rapport-empty').style.display = 'none';
+  document.getElementById('rapport-content').style.display = 'block';
+
+  const cats = [
+    {id:'h', key:'high',   label:'Aucune'},
+    {id:'m', key:'medium', label:'Aucune'},
+    {id:'l', key:'low',    label:'Aucune'},
+    {id:'ok',key:'ok',     label:'Aucune'}
+  ];
+  cats.forEach(c => {
+    document.getElementById('rpt-'+c.id+'-cnt').textContent = S.results[c.key].length;
+    const list = document.getElementById('rpt-'+c.id+'-list');
+    if (S.results[c.key].length === 0) {
+      list.innerHTML = '<div style="color:#bbb;font-size:11.5px">'+c.label+'</div>';
+    } else {
+      list.innerHTML = S.results[c.key].map((r, idx) =>
+        `<div class="rcat-item" onclick="showRapportDetail('${c.key}',${idx})">${esc(r.text)}</div>`
+      ).join('');
+    }
+  });
+}
+
+// ── History ───────────────────────────────────────────────────
+function saveHistory() {
+  S.history.unshift({
+    date: new Date().toLocaleString('fr-FR'),
+    high:   S.results.high.length,
+    medium: S.results.medium.length,
+    low:    S.results.low.length,
+    ok:     S.results.ok.length,
+    highFindings:   S.results.high.slice(0, 30),
+    mediumFindings: S.results.medium.slice(0, 20)
+  });
+  if (S.history.length > 30) S.history = S.history.slice(0, 30);
+  localStorage.setItem('reek_hist', JSON.stringify(S.history));
+}
+
+function renderHistory() {
+  const list = document.getElementById('hist-list');
+  if (!S.history.length) {
+    list.innerHTML = '<div class="empty-hint">Aucun scan dans l\'historique.</div>';
+    return;
+  }
+  list.innerHTML = S.history.map((h, idx) => {
+    const clean = !h.high && !h.medium;
+    return `<div class="hist-item" onclick="showHistDetail(${idx})">
+      <div class="hist-date">&#128336; ${h.date}</div>
+      <div class="hist-badges">
+        ${h.high   ? `<span class="hb hb-h">${h.high} HIGH</span>` : ''}
+        ${h.medium ? `<span class="hb hb-m">${h.medium} MEDIUM</span>` : ''}
+        ${clean    ? `<span class="hb hb-ok">PROPRE</span>` : ''}
+      </div>
+      <div class="hist-right">${clean ? 'Propre' : 'Alertes'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Indicator ─────────────────────────────────────────────────
+function setIndicator(type, text) {
+  const ind = document.getElementById('con-ind');
+  ind.className = 'console-indicator' + (type ? ' '+type : '');
+  document.getElementById('con-status').textContent = text;
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copyLog() {
+  navigator.clipboard.writeText(S.lines.join('\n')).catch(()=>{});
+}
+
+function exportLog() {
+  const blob = new Blob([S.lines.join('\r\n')], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'reek_scan_'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
